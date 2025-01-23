@@ -1,25 +1,29 @@
-export interface CsvComparison {
-    added: any[];
-    removed: any[];
+export interface CsvRow {
+    [key: string]: string | number;
+}
+
+export interface ComparisonData {
+    added: CsvRow[];
+    removed: CsvRow[];
     modified: ModifiedRow[];
-    unchanged: any[];
+    unchanged: CsvRow[];
 }
 
 export interface ModifiedRow {
-    original: any;
-    modified: any;
+    original: CsvRow;
+    modified: CsvRow;
     changes: ColumnChange[];
 }
 
 export interface ColumnChange {
     column: string;
-    oldValue: any;
-    newValue: any;
+    oldValue: string | number;
+    newValue: string | number;
 }
 
 export interface FileUploadResponse {
     message: string;
-    files: string[];
+    data: ComparisonData;
 }
 
 export interface ExportResponse {

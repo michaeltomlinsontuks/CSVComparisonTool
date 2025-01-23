@@ -1,27 +1,44 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CsvComparison, FileUploadResponse, ExportResponse } from '../models/csv.model';
+import { ComparisonData, CsvRow } from '../models/csv.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CsvService {
-  private apiUrl = 'http://localhost:3000/api/csv';
+  private apiUrl = 'http://localhost:3000/api';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-  uploadFiles(files: File[]): Observable<FileUploadResponse> {
+  compareFiles(baseFile: File, updatedFile: File): Observable<ComparisonData> {
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    return this.http.post<FileUploadResponse>(`${this.apiUrl}/upload`, formData);
+    formData.append('baseFile', baseFile);
+    formData.append('updatedFile', updatedFile);
+    return this.http.post<ComparisonData>(`${this.apiUrl}/compare`, formData);
   }
 
-  compareFiles(file1: string, file2: string): Observable<CsvComparison> {
-    return this.http.post<CsvComparison>(`${this.apiUrl}/compare`, { file1, file2 });
+  approveRows(rows: CsvRow[]): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/approve`, { rows });
   }
 
-  exportMerged(data: any[]): Observable<ExportResponse> {
-    return this.http.post<ExportResponse>(`${this.apiUrl}/export`, { data });
+  approveAll(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/approve-all`, {});
+  }
+
+  deleteRows(rows: CsvRow[]): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/delete`, { rows });
+  }
+
+  exportData(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export`, {
+      responseType: 'blob'
+    });
+  }
+
+  exportDifferences(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/export-differences`, {
+      responseType: 'blob'
+    });
   }
 }

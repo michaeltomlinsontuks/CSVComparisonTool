@@ -1,106 +1,213 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { ToolbarComponent } from './components/toolbar/toolbar.component';
-import { FileUploadComponent } from './components/file-upload/file-upload.component';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ComparisonTableComponent } from './components/comparison-table/comparison-table.component';
+import { FileUploadComponent } from './components/file-upload/file-upload.component';
+import { StatisticsComponent } from './components/statistics/statistics.component';
+import { ActionBarComponent } from './components/action-bar/action-bar.component';
 import { CsvService } from './services/csv.service';
-import { CsvComparison } from './models/csv.model';
+import { ComparisonData, CsvRow } from './models/csv.model';
 
 @Component({
   selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet,
-    ToolbarComponent,
+    MatSnackBarModule,
+    ComparisonTableComponent,
     FileUploadComponent,
-    ComparisonTableComponent
-  ]
+    StatisticsComponent,
+    ActionBarComponent
+  ],
+  template: `
+    <div class="app-container">
+      <app-file-upload
+        (filesSelected)="onFilesSelected($event)"
+        #fileUpload>
+      </app-file-upload>
+
+      <app-statistics
+        *ngIf="comparisonData"
+        [comparisonData]="comparisonData"
+        [remainingToProcess]="getRemainingToProcess()">
+      </app-statistics>
+
+      <app-comparison-table
+        *ngIf="comparisonData"
+        [comparisonData]="comparisonData"
+        (selectionChange)="onSelectionChange($event)"
+        #comparisonTable>
+      </app-comparison-table>
+
+      <app-action-bar
+        *ngIf="comparisonData"
+        [hasSelection]="hasSelection"
+        (approve)="approveSelected()"
+        (approveAll)="approveAll()"
+        (edit)="editSelected()"
+        (deleteRow)="deleteSelected()"
+        (export)="exportData()"
+        (exportDifferences)="exportDifferences()">
+      </app-action-bar>
+    </div>
+  `,
+  styles: [`
+    .app-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #f5f5f5;
+    }
+
+    app-comparison-table {
+      flex: 1;
+      overflow: hidden;
+    }
+  `]
 })
 export class AppComponent {
-  comparisonData?: CsvComparison;
-  uploadedFiles: string[] = [];
+  comparisonData: ComparisonData | null = null;
+  hasSelection = false;
+  selectedRows: CsvRow[] = [];
 
   constructor(
     private csvService: CsvService,
     private snackBar: MatSnackBar
   ) {}
 
-  onFilesSelected(files: File[]) {
-    this.csvService.uploadFiles(files).subscribe({
-      next: (response) => {
-        this.uploadedFiles = response.files;
-        this.compareFiles();
-      },
-      error: (error) => {
-        this.snackBar.open('Error uploading files: ' + error.message, 'Close', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  private compareFiles() {
-    if (this.uploadedFiles.length !== 2) return;
-
-    this.csvService.compareFiles(this.uploadedFiles[0], this.uploadedFiles[1]).subscribe({
-      next: (data) => {
+  onFilesSelected(files: [File, File]): void {
+    this.csvService.compareFiles(files[0], files[1]).subscribe({
+      next: (data: ComparisonData) => {
         this.comparisonData = data;
+        this.showNotification('Files compared successfully');
       },
-      error: (error) => {
-        this.snackBar.open('Error comparing files: ' + error.message, 'Close', {
-          duration: 3000
-        });
+      error: (error: Error) => {
+        this.showNotification('Error comparing files: ' + error.message, true);
       }
     });
   }
 
-  onExportAll() {
-    if (!this.comparisonData) return;
-
-    const allData = [
-      ...this.comparisonData.added,
-      ...this.comparisonData.removed,
-      ...this.comparisonData.modified.map(row => row.modified),
-      ...this.comparisonData.unchanged
-    ];
-
-    this.exportData(allData);
+  onSelectionChange(selectedRows: CsvRow[]): void {
+    this.selectedRows = selectedRows;
+    this.hasSelection = selectedRows.length > 0;
   }
 
-  onExportDifferences() {
-    if (!this.comparisonData) return;
-
-    const differences = [
-      ...this.comparisonData.added,
-      ...this.comparisonData.removed,
-      ...this.comparisonData.modified.map(row => row.modified)
-    ];
-
-    this.exportData(differences);
-  }
-
-  private exportData(data: any[]) {
-    this.csvService.exportMerged(data).subscribe({
-      next: (response) => {
-        this.snackBar.open('Data exported successfully', 'Close', {
-          duration: 3000
+  approveSelected(): void {
+    if (!this.comparisonData || !this.selectedRows.length) return;
+    
+    this.csvService.approveRows(this.selectedRows).subscribe({
+      next: () => {
+        this.showNotification('Selected rows approved');
+        // Update local state
+        this.selectedRows.forEach(row => {
+          (row as any)._status = 'unchanged';
         });
+        this.selectedRows = [];
+        this.hasSelection = false;
       },
-      error: (error) => {
-        this.snackBar.open('Error exporting data: ' + error.message, 'Close', {
-          duration: 3000
-        });
+      error: (error: Error) => {
+        this.showNotification('Error approving rows: ' + error.message, true);
       }
     });
   }
 
-  onResetData() {
-    this.comparisonData = undefined;
-    this.uploadedFiles = [];
+  approveAll(): void {
+    if (!this.comparisonData) return;
+
+    this.csvService.approveAll().subscribe({
+      next: () => {
+        this.showNotification('All changes approved');
+        // Update local state
+        if (this.comparisonData) {
+          this.comparisonData.added = [];
+          this.comparisonData.removed = [];
+          this.comparisonData.modified = [];
+        }
+      },
+      error: (error: Error) => {
+        this.showNotification('Error approving all changes: ' + error.message, true);
+      }
+    });
+  }
+
+  editSelected(): void {
+    if (!this.selectedRows.length) return;
+    // TODO: Implement edit dialog
+    this.showNotification('Edit functionality coming soon');
+  }
+
+  deleteSelected(): void {
+    if (!this.selectedRows.length) return;
+    
+    this.csvService.deleteRows(this.selectedRows).subscribe({
+      next: () => {
+        this.showNotification('Selected rows deleted');
+        // Update local state
+        this.selectedRows.forEach(row => {
+          const index = this.comparisonData?.unchanged.findIndex(r => r === row);
+          if (index !== undefined && index !== -1) {
+            this.comparisonData?.unchanged.splice(index, 1);
+          }
+        });
+        this.selectedRows = [];
+        this.hasSelection = false;
+      },
+      error: (error: Error) => {
+        this.showNotification('Error deleting rows: ' + error.message, true);
+      }
+    });
+  }
+
+  exportData(): void {
+    if (!this.comparisonData) return;
+    
+    this.csvService.exportData().subscribe({
+      next: (blob: Blob) => {
+        this.downloadFile(blob, 'exported_data.csv');
+        this.showNotification('Data exported successfully');
+      },
+      error: (error: Error) => {
+        this.showNotification('Error exporting data: ' + error.message, true);
+      }
+    });
+  }
+
+  exportDifferences(): void {
+    if (!this.comparisonData) return;
+    
+    this.csvService.exportDifferences().subscribe({
+      next: (blob: Blob) => {
+        this.downloadFile(blob, 'differences.csv');
+        this.showNotification('Differences exported successfully');
+      },
+      error: (error: Error) => {
+        this.showNotification('Error exporting differences: ' + error.message, true);
+      }
+    });
+  }
+
+  getRemainingToProcess(): number {
+    if (!this.comparisonData) return 0;
+    return this.comparisonData.added.length +
+           this.comparisonData.removed.length +
+           this.comparisonData.modified.length;
+  }
+
+  private showNotification(message: string, isError = false): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      panelClass: isError ? ['error-snackbar'] : ['success-snackbar'],
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+  }
+
+  private downloadFile(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }

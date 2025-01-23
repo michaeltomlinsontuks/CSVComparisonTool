@@ -1,27 +1,118 @@
 /* You can add global styles to this file, and also import other style files */
+
 @use '@angular/material' as mat;
 
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  font-family: Roboto, "Helvetica Neue", sans-serif; 
+  background-color: #f5f5f5;
 }
 
-// Custom Material Theme
-@include mat.core();
+// Custom scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-$primary: mat.define-palette(mat.$blue-palette);
-$accent: mat.define-palette(mat.$amber-palette, A200, A100, A400);
-$warn: mat.define-palette(mat.$red-palette);
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
 
-$theme: mat.define-light-theme((
-  color: (
-    primary: $primary,
-    accent: $accent,
-    warn: $warn,
-  ),
-  typography: mat.define-typography-config(),
-  density: 0,
-));
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
 
-@include mat.all-component-themes($theme);
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+// Snackbar styles
+.success-snackbar {
+  background: #4caf50;
+  color: white;
+}
+
+.error-snackbar {
+  background: #f44336;
+  color: white;
+}
+
+// Material table overrides
+.mat-mdc-table {
+  background: transparent !important;
+}
+
+.mat-mdc-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+// Common utility classes
+.flex-spacer {
+  flex: 1 1 auto;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+// Animation classes
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Card styles
+.mat-mdc-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+// Button styles
+.mat-mdc-raised-button {
+  text-transform: uppercase;
+  font-weight: 500 !important;
+}
+
+// Status colors
+.status-added {
+  color: #4caf50;
+}
+
+.status-removed {
+  color: #f44336;
+}
+
+.status-modified {
+  color: #ff9800;
+}
+
+// Table row status colors with opacity
+.row-added {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+.row-removed {
+  background-color: rgba(244, 67, 54, 0.1) !important;
+}
+
+.row-modified {
+  background-color: rgba(255, 152, 0, 0.1) !important;
+}
