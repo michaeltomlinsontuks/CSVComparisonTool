@@ -1,0 +1,23 @@
+<mat-toolbar color="primary">
+  <span>CSV Comparison Tool</span>
+  <span class="spacer"></span>
+  
+  <button mat-icon-button [matMenuTriggerFor]="menu" [disabled]="!hasData">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  
+  <mat-menu #menu="matMenu">
+    <button mat-menu-item (click)="exportAll.emit()">
+      <mat-icon>file_download</mat-icon>
+      <span>Export All</span>
+    </button>
+    <button mat-menu-item (click)="exportDifferences.emit()">
+      <mat-icon>compare</mat-icon>
+      <span>Export Differences</span>
+    </button>
+    <button mat-menu-item (click)="resetData.emit()">
+      <mat-icon>refresh</mat-icon>
+      <span>Reset</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>
