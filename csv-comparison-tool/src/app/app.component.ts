@@ -1,213 +1,223 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ComparisonTableComponent } from './components/comparison-table/comparison-table.component';
 import { FileUploadComponent } from './components/file-upload/file-upload.component';
-import { StatisticsComponent } from './components/statistics/statistics.component';
+import { ComparisonTableComponent } from './components/comparison-table/comparison-table.component';
 import { ActionBarComponent } from './components/action-bar/action-bar.component';
-import { CsvService } from './services/csv.service';
+import { StatisticsComponent } from './components/statistics/statistics.component';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ComparisonData, CsvRow } from './models/csv.model';
+import { CsvService } from './services/csv.service';
+import { EditDialogComponent } from './components/edit-dialog/edit-dialog.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    MatSnackBarModule,
-    ComparisonTableComponent,
     FileUploadComponent,
+    ComparisonTableComponent,
+    ActionBarComponent,
     StatisticsComponent,
-    ActionBarComponent
+    MatSnackBarModule,
+    MatDialogModule
   ],
   template: `
     <div class="app-container">
       <app-file-upload
-        (filesSelected)="onFilesSelected($event)"
-        #fileUpload>
+        #fileUpload
+        [class.minimized]="hasComparisonData"
+        (filesSelected)="onFilesSelected($event)">
       </app-file-upload>
 
-      <app-statistics
-        *ngIf="comparisonData"
-        [comparisonData]="comparisonData"
-        [remainingToProcess]="getRemainingToProcess()">
-      </app-statistics>
+      <ng-container *ngIf="hasComparisonData">
+        <app-statistics
+          [comparisonData]="comparisonData!"
+          [remainingToProcess]="remainingToProcess">
+        </app-statistics>
 
-      <app-comparison-table
-        *ngIf="comparisonData"
-        [comparisonData]="comparisonData"
-        (selectionChange)="onSelectionChange($event)"
-        #comparisonTable>
-      </app-comparison-table>
+        <app-comparison-table
+          #comparisonTable
+          [comparisonData]="comparisonData!"
+          (selectionChange)="onSelectionChange($event)">
+        </app-comparison-table>
 
-      <app-action-bar
-        *ngIf="comparisonData"
-        [hasSelection]="hasSelection"
-        (approve)="approveSelected()"
-        (approveAll)="approveAll()"
-        (edit)="editSelected()"
-        (deleteRow)="deleteSelected()"
-        (export)="exportData()"
-        (exportDifferences)="exportDifferences()">
-      </app-action-bar>
+        <app-action-bar
+          [hasSelection]="hasSelection"
+          (approve)="approveSelected()"
+          (approveAll)="approveAll()"
+          (edit)="editSelected()"
+          (deleteRow)="deleteSelected()"
+          (export)="exportData()"
+          (exportDifferences)="exportDifferences()">
+        </app-action-bar>
+      </ng-container>
     </div>
   `,
   styles: [`
     .app-container {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
+      min-height: 100vh;
       background-color: #f5f5f5;
+      padding-bottom: 80px; /* Space for action bar */
     }
 
-    app-comparison-table {
-      flex: 1;
+    .minimized {
+      height: 0;
       overflow: hidden;
     }
   `]
 })
 export class AppComponent {
   comparisonData: ComparisonData | null = null;
-  hasSelection = false;
   selectedRows: CsvRow[] = [];
+  hasSelection = false;
 
   constructor(
     private csvService: CsvService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {}
 
-  onFilesSelected(files: [File, File]): void {
-    this.csvService.compareFiles(files[0], files[1]).subscribe({
-      next: (data: ComparisonData) => {
+  get hasComparisonData(): boolean {
+    return this.comparisonData !== null;
+  }
+
+  get remainingToProcess(): number {
+    if (!this.comparisonData) return 0;
+    return (
+      this.comparisonData.added.length +
+      this.comparisonData.removed.length +
+      this.comparisonData.modified.length
+    );
+  }
+
+  onFilesSelected([file1, file2]: [File, File]): void {
+    this.csvService.compareFiles(file1, file2).subscribe({
+      next: (data) => {
         this.comparisonData = data;
-        this.showNotification('Files compared successfully');
+        this.showMessage('Files compared successfully');
       },
-      error: (error: Error) => {
-        this.showNotification('Error comparing files: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error comparing files: ' + error.message, true);
       }
     });
   }
 
-  onSelectionChange(selectedRows: CsvRow[]): void {
-    this.selectedRows = selectedRows;
-    this.hasSelection = selectedRows.length > 0;
+  onSelectionChange(rows: CsvRow[]): void {
+    this.selectedRows = rows;
+    this.hasSelection = rows.length > 0;
   }
 
   approveSelected(): void {
-    if (!this.comparisonData || !this.selectedRows.length) return;
-    
+    if (!this.selectedRows.length) return;
     this.csvService.approveRows(this.selectedRows).subscribe({
       next: () => {
-        this.showNotification('Selected rows approved');
-        // Update local state
-        this.selectedRows.forEach(row => {
-          (row as any)._status = 'unchanged';
-        });
+        this.showMessage('Changes approved');
+        this.updateComparisonData();
         this.selectedRows = [];
         this.hasSelection = false;
       },
-      error: (error: Error) => {
-        this.showNotification('Error approving rows: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error approving changes: ' + error.message, true);
       }
     });
   }
 
   approveAll(): void {
-    if (!this.comparisonData) return;
-
     this.csvService.approveAll().subscribe({
       next: () => {
-        this.showNotification('All changes approved');
-        // Update local state
-        if (this.comparisonData) {
-          this.comparisonData.added = [];
-          this.comparisonData.removed = [];
-          this.comparisonData.modified = [];
-        }
+        this.showMessage('All changes approved');
+        this.updateComparisonData();
+        this.selectedRows = [];
+        this.hasSelection = false;
       },
-      error: (error: Error) => {
-        this.showNotification('Error approving all changes: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error approving all changes: ' + error.message, true);
       }
     });
   }
 
   editSelected(): void {
     if (!this.selectedRows.length) return;
-    // TODO: Implement edit dialog
-    this.showNotification('Edit functionality coming soon');
+    
+    const dialogRef = this.dialog.open(EditDialogComponent, {
+      width: '600px',
+      data: { row: this.selectedRows[0] }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // TODO: Implement backend endpoint for updating rows
+        this.showMessage('Row updated successfully');
+        this.updateComparisonData();
+      }
+    });
   }
 
   deleteSelected(): void {
     if (!this.selectedRows.length) return;
-    
     this.csvService.deleteRows(this.selectedRows).subscribe({
       next: () => {
-        this.showNotification('Selected rows deleted');
-        // Update local state
-        this.selectedRows.forEach(row => {
-          const index = this.comparisonData?.unchanged.findIndex(r => r === row);
-          if (index !== undefined && index !== -1) {
-            this.comparisonData?.unchanged.splice(index, 1);
-          }
-        });
+        this.showMessage('Rows deleted');
+        this.updateComparisonData();
         this.selectedRows = [];
         this.hasSelection = false;
       },
-      error: (error: Error) => {
-        this.showNotification('Error deleting rows: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error deleting rows: ' + error.message, true);
       }
     });
   }
 
   exportData(): void {
-    if (!this.comparisonData) return;
-    
     this.csvService.exportData().subscribe({
-      next: (blob: Blob) => {
-        this.downloadFile(blob, 'exported_data.csv');
-        this.showNotification('Data exported successfully');
+      next: (blob) => {
+        this.downloadBlob(blob, 'comparison_result.csv');
+        this.showMessage('Data exported successfully');
       },
-      error: (error: Error) => {
-        this.showNotification('Error exporting data: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error exporting data: ' + error.message, true);
       }
     });
   }
 
   exportDifferences(): void {
-    if (!this.comparisonData) return;
-    
     this.csvService.exportDifferences().subscribe({
-      next: (blob: Blob) => {
-        this.downloadFile(blob, 'differences.csv');
-        this.showNotification('Differences exported successfully');
+      next: (blob) => {
+        this.downloadBlob(blob, 'differences.csv');
+        this.showMessage('Differences exported successfully');
       },
-      error: (error: Error) => {
-        this.showNotification('Error exporting differences: ' + error.message, true);
+      error: (error) => {
+        this.showMessage('Error exporting differences: ' + error.message, true);
       }
     });
   }
 
-  getRemainingToProcess(): number {
-    if (!this.comparisonData) return 0;
-    return this.comparisonData.added.length +
-           this.comparisonData.removed.length +
-           this.comparisonData.modified.length;
-  }
-
-  private showNotification(message: string, isError = false): void {
+  private showMessage(message: string, isError = false): void {
     this.snackBar.open(message, 'Close', {
-      duration: 3000,
-      panelClass: isError ? ['error-snackbar'] : ['success-snackbar'],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      duration: 5000,
+      panelClass: isError ? ['error-snackbar'] : undefined
     });
   }
 
-  private downloadFile(blob: Blob, filename: string): void {
+  private downloadBlob(blob: Blob, filename: string): void {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
     link.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  private updateComparisonData(): void {
+    // TODO: Implement refresh of comparison data after changes
+    if (this.comparisonData) {
+      // Remove approved/deleted rows from the lists
+      this.selectedRows.forEach(row => {
+        this.comparisonData!.added = this.comparisonData!.added.filter(r => r !== row);
+        this.comparisonData!.removed = this.comparisonData!.removed.filter(r => r !== row);
+        this.comparisonData!.modified = this.comparisonData!.modified.filter(r => r.modified !== row);
+      });
+    }
   }
 }

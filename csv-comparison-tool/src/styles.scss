@@ -1,7 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
-
 @use '@angular/material' as mat;
 
+/* Global styles */
 html, body { 
   height: 100%; 
   margin: 0; 
@@ -9,7 +8,31 @@ html, body {
   background-color: #f5f5f5;
 }
 
-// Custom scrollbar
+/* Status Colors */
+.status-added {
+  color: #4caf50 !important;
+}
+
+.status-removed {
+  color: #f44336 !important;
+}
+
+.status-modified {
+  color: #ff9800 !important;
+}
+
+/* Snackbar Styles */
+.error-snackbar {
+  background: #f44336;
+  color: white;
+}
+
+.success-snackbar {
+  background: #4caf50;
+  color: white;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -17,6 +40,7 @@ html, body {
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -28,18 +52,36 @@ html, body {
   background: #666;
 }
 
-// Snackbar styles
-.success-snackbar {
-  background: #4caf50;
-  color: white;
+/* Utility Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
 }
 
-.error-snackbar {
-  background: #f44336;
-  color: white;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-// Material table overrides
+/* Material Theme Overrides */
+.mat-mdc-snack-bar-container {
+  &.error-snackbar {
+    --mdc-snackbar-container-color: #f44336;
+    --mat-mdc-snack-bar-button-color: white;
+    --mdc-snackbar-supporting-text-color: white;
+  }
+}
+
+.mat-mdc-menu-panel {
+  max-width: none !important;
+}
+
+/* Material table overrides */
 .mat-mdc-table {
   background: transparent !important;
 }
@@ -48,7 +90,7 @@ html, body {
   background: rgba(0, 0, 0, 0.04);
 }
 
-// Common utility classes
+/* Common utility classes */
 .flex-spacer {
   flex: 1 1 auto;
 }
@@ -65,46 +107,19 @@ html, body {
   margin-top: 20px;
 }
 
-// Animation classes
-.fade-in {
-  animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-// Card styles
+/* Card styles */
 .mat-mdc-card {
-  border-radius: 8px;
+  border-radius: 8px !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-// Button styles
+/* Button styles */
 .mat-mdc-raised-button {
   text-transform: uppercase;
   font-weight: 500 !important;
 }
 
-// Status colors
-.status-added {
-  color: #4caf50;
-}
-
-.status-removed {
-  color: #f44336;
-}
-
-.status-modified {
-  color: #ff9800;
-}
-
-// Table row status colors with opacity
+/* Table row status colors with opacity */
 .row-added {
   background-color: rgba(76, 175, 80, 0.1) !important;
 }
@@ -115,4 +130,9 @@ html, body {
 
 .row-modified {
   background-color: rgba(255, 152, 0, 0.1) !important;
+}
+
+/* Fix for Material checkbox alignment */
+.mat-mdc-checkbox {
+  margin: 0 !important;
 }

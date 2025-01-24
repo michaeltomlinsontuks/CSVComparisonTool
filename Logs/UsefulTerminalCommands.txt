@@ -1,0 +1,2 @@
+pkill -f "ts-node" || true && cd backend && npm start
+cd csv-comparison-tool && npm start

@@ -6,12 +6,21 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { SelectionModel } from '@angular/cdk/collections';
-import { ComparisonData, CsvRow } from '../../models/csv.model';
-import { ColumnManagerComponent } from '../column-manager/column-manager.component';
+import { ComparisonData, CsvRow, ModifiedRow } from '../../models/csv.model';
+import { ColumnManagerComponent, ColumnDefinition } from '../column-manager/column-manager.component';
 
-interface TableRow extends CsvRow {
+interface TableRow {
+  [key: string]: string | number | CsvRow | ColumnChange[] | undefined;
   _status: 'added' | 'removed' | 'modified' | 'unchanged';
   _id: string;
+  _original?: CsvRow;
+  _changes?: ColumnChange[];
+}
+
+interface ColumnChange {
+  column: string;
+  oldValue: string | number;
+  newValue: string | number;
 }
 
 @Component({
@@ -30,7 +39,7 @@ interface TableRow extends CsvRow {
     <div class="table-container mat-elevation-z2">
       <div class="table-header">
         <app-column-manager
-          [columns]="columnDefinitions"
+          [columns]="visibleColumns"
           (columnsChange)="onColumnsChange($event)">
         </app-column-manager>
         
@@ -47,13 +56,13 @@ interface TableRow extends CsvRow {
               <mat-checkbox
                 [checked]="isAllSelected()"
                 [indeterminate]="isIndeterminate()"
-                (change)="toggleAllRows($event.checked)">
+                (change)="$event ? toggleAllRows($event.checked) : null">
               </mat-checkbox>
             </th>
             <td mat-cell *matCellDef="let row">
               <mat-checkbox
                 [checked]="selection.isSelected(row)"
-                (change)="toggleRow(row)"
+                (change)="$event ? toggleRow(row) : null"
                 [disabled]="row._status === 'unchanged'">
               </mat-checkbox>
             </td>
@@ -70,11 +79,16 @@ interface TableRow extends CsvRow {
           </ng-container>
 
           <!-- Data Columns -->
-          <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ column }}</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="getCellClass(row)">
-              {{ row[column] }}
-            </td>
+          <ng-container *ngFor="let column of displayedColumns">
+            <ng-container [matColumnDef]="column">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ column }}</th>
+              <td mat-cell *matCellDef="let row" [ngClass]="getCellClass(row, column)">
+                {{ row[column] }}
+                <span *ngIf="isModifiedCell(row, column)" class="change-indicator">
+                  ({{ getOriginalValue(row, column) }})
+                </span>
+              </td>
+            </ng-container>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="allDisplayedColumns; sticky: true"></tr>
@@ -101,25 +115,18 @@ interface TableRow extends CsvRow {
   `,
   styles: [`
     .table-container {
+      margin: 20px;
       background: white;
       border-radius: 8px;
-      margin: 16px;
+      overflow: hidden;
     }
 
     .table-header {
+      padding: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-    }
-
-    .selection-info {
-      color: #666;
-      font-weight: 500;
-      span {
-        font-weight: bold;
-      }
+      border-bottom: 1px solid #e0e0e0;
     }
 
     .table-scroll-container {
@@ -131,189 +138,211 @@ interface TableRow extends CsvRow {
       width: 100%;
     }
 
-    tr.mat-mdc-row {
-      height: 48px;
+    .status-added {
+      color: #4caf50;
+      font-weight: 500;
+    }
 
-      &:hover {
-        background: rgba(0, 0, 0, 0.04);
-        cursor: pointer;
-      }
+    .status-removed {
+      color: #f44336;
+      font-weight: 500;
+    }
 
-      &.row-added {
-        background-color: rgba(76, 175, 80, 0.1);
-      }
+    .status-modified {
+      color: #ff9800;
+      font-weight: 500;
+    }
 
-      &.row-removed {
-        background-color: rgba(244, 67, 54, 0.1);
-      }
+    .row-added {
+      background-color: rgba(76, 175, 80, 0.1);
+    }
 
-      &.row-modified {
-        background-color: rgba(255, 152, 0, 0.1);
-      }
+    .row-removed {
+      background-color: rgba(244, 67, 54, 0.1);
+    }
+
+    .row-modified {
+      background-color: rgba(255, 152, 0, 0.1);
+    }
+
+    .cell-modified {
+      position: relative;
+    }
+
+    .change-indicator {
+      font-size: 0.8em;
+      color: #666;
+      margin-left: 4px;
     }
 
     .no-data {
       text-align: center;
       padding: 40px;
-      background: transparent;
-      box-shadow: none;
-      
-      p {
-        font-size: 1.2em;
-        color: #666;
-        margin: 8px 0;
-
-        &.sub-text {
-          font-size: 0.9em;
-          color: #999;
-        }
-      }
+      background: #fafafa;
+      margin: 20px;
     }
 
-    th.mat-mdc-header-cell {
-      color: rgba(0, 0, 0, 0.87);
-      font-weight: 500;
-      font-size: 14px;
-      padding: 0 16px;
-      background: white;
-      z-index: 1;
+    .no-data .sub-text {
+      color: #666;
+      margin-top: 8px;
     }
 
-    td.mat-mdc-cell {
-      color: rgba(0, 0, 0, 0.87);
-      font-size: 14px;
-      padding: 0 16px;
+    tr.mat-mdc-row {
+      cursor: pointer;
     }
 
-    .mat-mdc-paginator {
-      border-top: 1px solid rgba(0, 0, 0, 0.12);
+    tr.mat-mdc-row:hover {
+      background: rgba(0, 0, 0, 0.04);
     }
   `]
 })
 export class ComparisonTableComponent implements OnInit {
-  @Input() comparisonData!: ComparisonData;
-  @Output() selectionChange = new EventEmitter<TableRow[]>();
+  @Input() set comparisonData(data: ComparisonData) {
+    if (data) {
+      this.processComparisonData(data);
+    }
+  }
+
+  @Output() selectionChange = new EventEmitter<CsvRow[]>();
+
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatTable) table!: MatTable<TableRow>;
 
   dataSource: TableRow[] = [];
   selection = new SelectionModel<TableRow>(true, []);
-  columnDefinitions: { name: string; visible: boolean; }[] = [];
+  columnDefinitions: string[] = [];
   displayedColumns: string[] = [];
-  
-  get allDisplayedColumns(): string[] {
-    return ['select', 'status', ...this.displayedColumns];
+  allDisplayedColumns: string[] = ['select', 'status'];
+
+  get visibleColumns(): ColumnDefinition[] {
+    return this.columnDefinitions.map(col => ({
+      name: col,
+      visible: this.displayedColumns.includes(col)
+    }));
   }
 
   ngOnInit() {
-    if (!this.comparisonData) return;
+    this.selection.changed.subscribe(() => {
+      this.selectionChange.emit(this.selection.selected as unknown as CsvRow[]);
+    });
+  }
 
-    // Get all unique column names
-    const allRows = [
-      ...this.comparisonData.added,
-      ...this.comparisonData.removed,
-      ...this.comparisonData.modified.map(m => m.modified),
-      ...this.comparisonData.unchanged
-    ];
+  processComparisonData(data: ComparisonData) {
+    const rows: TableRow[] = [];
 
-    if (allRows.length > 0) {
-      // Initialize column definitions
-      this.columnDefinitions = Object.keys(allRows[0]).map(key => ({
-        name: key,
-        visible: true
-      }));
-      this.displayedColumns = this.columnDefinitions
-        .filter(col => col.visible)
-        .map(col => col.name);
-    }
-
-    // Prepare data source with unique IDs
-    this.dataSource = [
-      ...this.comparisonData.added.map((row, i): TableRow => ({ 
-        ...row, 
+    // Process added rows
+    data.added.forEach(row => {
+      const tableRow: TableRow = {
+        ...row,
         _status: 'added',
-        _id: `added-${i}`
-      })),
-      ...this.comparisonData.removed.map((row, i): TableRow => ({ 
-        ...row, 
+        _id: this.generateRowId(row)
+      };
+      rows.push(tableRow);
+    });
+
+    // Process removed rows
+    data.removed.forEach(row => {
+      const tableRow: TableRow = {
+        ...row,
         _status: 'removed',
-        _id: `removed-${i}`
-      })),
-      ...this.comparisonData.modified.map((row, i): TableRow => ({ 
-        ...row.modified, 
+        _id: this.generateRowId(row)
+      };
+      rows.push(tableRow);
+    });
+
+    // Process modified rows
+    data.modified.forEach((modifiedRow: ModifiedRow) => {
+      const tableRow: TableRow = {
+        ...modifiedRow.modified,
         _status: 'modified',
-        _id: `modified-${i}`
-      })),
-      ...this.comparisonData.unchanged.map((row, i): TableRow => ({ 
-        ...row, 
+        _id: this.generateRowId(modifiedRow.modified),
+        _original: modifiedRow.original,
+        _changes: modifiedRow.changes
+      };
+      rows.push(tableRow);
+    });
+
+    // Process unchanged rows
+    data.unchanged.forEach(row => {
+      const tableRow: TableRow = {
+        ...row,
         _status: 'unchanged',
-        _id: `unchanged-${i}`
-      }))
-    ];
+        _id: this.generateRowId(row)
+      };
+      rows.push(tableRow);
+    });
+
+    this.dataSource = rows;
+    this.updateColumnDefinitions(rows);
   }
 
-  onColumnsChange(columns: string[]): void {
-    this.displayedColumns = columns;
-    if (this.table) {
-      this.table.renderRows();
+  updateColumnDefinitions(rows: TableRow[]) {
+    if (rows.length) {
+      const firstRow = rows[0];
+      this.columnDefinitions = Object.keys(firstRow).filter(key => !key.startsWith('_'));
+      this.displayedColumns = [...this.columnDefinitions];
+      this.allDisplayedColumns = ['select', 'status', ...this.displayedColumns];
     }
   }
 
-  isAllSelected(): boolean {
-    const selectableRows = this.dataSource.filter(row => row._status !== 'unchanged');
-    return selectableRows.length > 0 && 
-           selectableRows.every(row => this.selection.isSelected(row));
+  onColumnsChange(columns: ColumnDefinition[]) {
+    this.displayedColumns = columns.filter(col => col.visible).map(col => col.name);
+    this.allDisplayedColumns = ['select', 'status', ...this.displayedColumns];
   }
 
-  isIndeterminate(): boolean {
-    const selectableRows = this.dataSource.filter(row => row._status !== 'unchanged');
-    return selectableRows.some(row => this.selection.isSelected(row)) && !this.isAllSelected();
+  isAllSelected() {
+    const numSelected = this.selection.selected.length;
+    const numRows = this.dataSource.filter(row => row._status !== 'unchanged').length;
+    return numSelected === numRows;
   }
 
-  toggleAllRows(checked: boolean): void {
-    const selectableRows = this.dataSource.filter(row => row._status !== 'unchanged');
+  isIndeterminate() {
+    const numSelected = this.selection.selected.length;
+    const numRows = this.dataSource.filter(row => row._status !== 'unchanged').length;
+    return numSelected > 0 && numSelected < numRows;
+  }
+
+  toggleAllRows(checked: boolean) {
     if (checked) {
-      selectableRows.forEach(row => this.selection.select(row));
+      const selectableRows = this.dataSource.filter(row => row._status !== 'unchanged');
+      this.selection.select(...selectableRows);
     } else {
       this.selection.clear();
     }
-    this.emitSelection();
   }
 
-  toggleRow(row: TableRow): void {
-    if (row._status === 'unchanged') return;
-    this.selection.toggle(row);
-    this.emitSelection();
+  toggleRow(row: TableRow) {
+    if (row._status !== 'unchanged') {
+      this.selection.toggle(row);
+    }
   }
 
   getRowClass(row: TableRow): string {
     return `row-${row._status}`;
   }
 
-  getCellClass(row: TableRow): string {
-    return row._status;
-  }
-
-  private emitSelection(): void {
-    this.selectionChange.emit(this.selection.selected);
-  }
-
-  approveSelected(): void {
-    this.selection.selected.forEach(row => {
-      const index = this.dataSource.findIndex(r => r._id === row._id);
-      if (index !== -1) {
-        this.dataSource[index] = { ...row, _status: 'unchanged' };
-      }
-    });
-    this.selection.clear();
-    this.emitSelection();
-    if (this.table) {
-      this.table.renderRows();
+  getCellClass(row: TableRow, column: string): string {
+    if (row._status === 'modified' && this.isModifiedCell(row, column)) {
+      return 'cell-modified';
     }
+    return '';
   }
 
-  getSelectedRows(): TableRow[] {
-    return this.selection.selected;
+  isModifiedCell(row: TableRow, column: string): boolean {
+    return row._status === 'modified' && 
+           row._changes?.some(change => change.column === column) || false;
+  }
+
+  getOriginalValue(row: TableRow, column: string): any {
+    if (row._status === 'modified' && row._original) {
+      return (row._original as any)[column];
+    }
+    return null;
+  }
+
+  private generateRowId(row: CsvRow): string {
+    const firstKey = Object.keys(row)[0];
+    return (row as any)[firstKey]?.toString() || Math.random().toString(36).substr(2, 9);
   }
 }

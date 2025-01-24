@@ -1,0 +1,34 @@
+core.mjs:20838 Angular is running in development mode.
+csv.service.ts:19 Comparing files: ExampleCSV-3.csv ExampleCSV-2.csv
+logging.interceptor.ts:16 [HTTP] Request: POST http://localhost:3000/api/csv/upload
+logging.interceptor.ts:23 [HTTP] Response: POST http://localhost:3000/api/csv/upload - 200 (40ms)
+logging.interceptor.ts:25 [HTTP] Response body: Object
+csv.service.ts:22 Upload response: Object
+logging.interceptor.ts:16 [HTTP] Request: POST http://localhost:3000/api/csv/compare
+logging.interceptor.ts:23 [HTTP] Response: POST http://localhost:3000/api/csv/compare - 200 (27ms)
+logging.interceptor.ts:25 [HTTP] Response body: Object
+csv.service.ts:24 Comparison result: Object
+csv.service.ts:44 Approving all changes
+logging.interceptor.ts:16 [HTTP] Request: POST http://localhost:3000/api/csv/approve
+:3000/api/csv/approve:1 
+        
+        
+       Failed to load resource: the server responded with a status of 404 (Not Found)
+logging.interceptor.ts:33 [HTTP] Error: POST http://localhost:3000/api/csv/approve - 404 (11ms)
+(anonymous) @ logging.interceptor.ts:33
+logging.interceptor.ts:34 [HTTP] Error details: Http failure response for http://localhost:3000/api/csv/approve: 404 Not Found
+(anonymous) @ logging.interceptor.ts:34
+logging.interceptor.ts:38 [HTTP] Server-side error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at _FetchBackend.parseBody (http.mjs:1763:42)
+    at _FetchBackend.<anonymous> (http.mjs:1715:21)
+    at Generator.next (<anonymous>)
+    at fulfilled (chunk-MCAPERH4.js?v=0a85c5db:36:24)
+    at _ZoneDelegate.invoke (zone.js:369:28)
+    at Object.onInvoke (core.mjs:6524:25)
+    at _ZoneDelegate.invoke (zone.js:368:34)
+    at ZoneImpl.run (zone.js:111:43)
+    at zone.js:2538:40
+(anonymous) @ logging.interceptor.ts:38
+csv.service.ts:48 Error approving all changes: HttpErrorResponse
+(anonymous) @ csv.service.ts:48
