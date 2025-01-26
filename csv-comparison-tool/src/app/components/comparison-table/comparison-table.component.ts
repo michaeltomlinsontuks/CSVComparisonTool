@@ -323,8 +323,11 @@ export class ComparisonTableComponent implements OnInit {
   }
 
   getCellClass(row: TableRow, column: string): string {
-    if (row._status === 'modified' && this.isModifiedCell(row, column)) {
-      return 'cell-modified';
+    if (row._status === 'modified' && row._changes) {
+      const change = row._changes.find(c => c.column === column);
+      if (change) {
+        return 'modified-cell';
+      }
     }
     return '';
   }
