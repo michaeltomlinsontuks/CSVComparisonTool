@@ -79,30 +79,32 @@ table {
       color: #FF9800;
     }
   }
+}
+
+// Separate modified cell styles to increase specificity
+td.modified-cell {
+  background-color: rgba(33, 150, 243, 0.3) !important;
+  position: relative;
+  z-index: 1;
   
-  .modified-cell {
-    background-color: rgba(33, 150, 243, 0.3) !important;
-    position: relative;
-    
-    &:hover {
-      background-color: rgba(33, 150, 243, 0.4) !important;
-    }
+  &:hover {
+    background-color: rgba(33, 150, 243, 0.4) !important;
+  }
 
-    &::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      border: 2px solid rgba(33, 150, 243, 0.5);
-      pointer-events: none;
-    }
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid rgba(33, 150, 243, 0.5);
+    pointer-events: none;
+  }
 
-    .original-value {
-      color: #666;
-      font-style: italic;
-    }
+  .original-value {
+    color: #666;
+    font-style: italic;
   }
 }
 
