@@ -44,7 +44,7 @@
 table {
   width: 100%;
   
-  .added-row {
+  .row-added {
     background-color: rgba(76, 175, 80, 0.1);
     
     &:hover {
@@ -56,7 +56,7 @@ table {
     }
   }
   
-  .removed-row {
+  .row-removed {
     background-color: rgba(244, 67, 54, 0.1);
     
     &:hover {
@@ -68,7 +68,7 @@ table {
     }
   }
   
-  .modified-row {
+  .row-modified {
     background-color: rgba(255, 152, 0, 0.1);
     
     &:hover {
@@ -97,6 +97,11 @@ table {
       bottom: 0;
       border: 2px solid rgba(33, 150, 243, 0.5);
       pointer-events: none;
+    }
+
+    .original-value {
+      color: #666;
+      font-style: italic;
     }
   }
 }
