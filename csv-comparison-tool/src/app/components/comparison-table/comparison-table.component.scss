@@ -78,20 +78,26 @@ table {
     mat-icon {
       color: #FF9800;
     }
-
-    .modified-cell {
-      background-color: rgba(33, 150, 243, 0.3);
-      position: relative;
-      
-      &:hover {
-        background-color: rgba(33, 150, 243, 0.4);
-      }
-    }
   }
   
   .modified-cell {
-    font-weight: bold;
-    color: #FF9800;
+    background-color: rgba(33, 150, 243, 0.3) !important;
+    position: relative;
+    
+    &:hover {
+      background-color: rgba(33, 150, 243, 0.4) !important;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 2px solid rgba(33, 150, 243, 0.5);
+      pointer-events: none;
+    }
   }
 }
 
