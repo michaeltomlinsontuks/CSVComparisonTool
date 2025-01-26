@@ -43,7 +43,7 @@
           <th mat-header-cell *matHeaderCellDef mat-sort-header> {{column}} </th>
           <td mat-cell *matCellDef="let row" [class.modified-cell]="isModifiedCell(row, column)">
             <ng-container *ngIf="isModifiedCell(row, column); else normalCell">
-              <span>{{row[column]}} <span class="original-value">({{getOriginalValue(row, column)}})</span></span>
+              <span>{{getOriginalValue(row, column)}} <span class="original-value">({{row[column]}})</span></span>
             </ng-container>
             <ng-template #normalCell>
               {{row[column]}}
