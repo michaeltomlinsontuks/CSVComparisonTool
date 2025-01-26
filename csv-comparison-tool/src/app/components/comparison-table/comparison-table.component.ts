@@ -326,6 +326,7 @@ export class ComparisonTableComponent implements OnInit {
     if (row._status === 'modified' && row._changes) {
       const change = row._changes.find(c => c.column === column);
       if (change) {
+        console.log(`Modified cell found for column ${column}:`, change); // Debug log
         return 'modified-cell';
       }
     }
