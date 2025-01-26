@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTable } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +26,7 @@ interface ColumnChange {
 @Component({
   selector: 'app-comparison-table',
   standalone: true,
+  encapsulation: ViewEncapsulation.None,
   imports: [
     CommonModule,
     MatTableModule,
