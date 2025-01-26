@@ -1,0 +1,24 @@
+# Logs
+backend/logs/
+backend/combined.log
+*.log
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Dependencies
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment files
+.env
+.env.local
