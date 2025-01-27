@@ -208,8 +208,7 @@ export class StatisticsComponent {
   }
 
   get progressPercentage(): number {
-    if (!this.totalRows) return 0;
-    const processed = this.totalRows - this.remainingToProcess;
-    return Math.round((processed / this.totalRows) * 100);
+    if (!this.comparisonData) return 0;
+    return 100; // If we have comparison data, we're done processing
   }
 }
