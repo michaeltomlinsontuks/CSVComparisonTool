@@ -183,11 +183,13 @@ export class FileUploadComponent {
   }
 
   compareFiles(): void {
-    if (!this.canCompare) return;
-    
-    this.isProcessing = true;
-    const files = this.zones.map(zone => zone.file) as [File, File];
-    this.filesSelected.emit(files);
+    if (this.canCompare) {
+      this.isProcessing = true;
+      const files = this.zones.map(zone => zone.file) as [File, File];
+      this.filesSelected.emit(files);
+      this.isProcessing = false;
+      this.minimize();
+    }
   }
 
   minimize(): void {

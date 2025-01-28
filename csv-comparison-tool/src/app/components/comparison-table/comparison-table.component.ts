@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTable } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +26,7 @@ interface ColumnChange {
 @Component({
   selector: 'app-comparison-table',
   standalone: true,
+  encapsulation: ViewEncapsulation.None,
   imports: [
     CommonModule,
     MatTableModule,
@@ -323,8 +324,12 @@ export class ComparisonTableComponent implements OnInit {
   }
 
   getCellClass(row: TableRow, column: string): string {
-    if (row._status === 'modified' && this.isModifiedCell(row, column)) {
-      return 'cell-modified';
+    if (row._status === 'modified' && row._changes) {
+      const change = row._changes.find(c => c.column === column);
+      if (change) {
+        console.log(`Modified cell found for column ${column}:`, change); // Debug log
+        return 'modified-cell';
+      }
     }
     return '';
   }
